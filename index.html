@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#4F46E5">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Timelines - Capture Your Memories</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192x192.png">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="style.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4F46E5',
+                        secondary: '#F59E0B',
+                        dark: '#111827',
+                        light: '#F3F4F6'
+                    },
+                    fontFamily: {
+                        sans: ['Montserrat', 'sans-serif']
+                    }
+                }
+            }
+        }
+        
+        // Register Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(registration => {
+                        console.log('ServiceWorker registration successful');
+                    })
+                    .catch(err => {
+                        console.log('ServiceWorker registration failed: ', err);
+                    });
+            });
+        }
+    </script>
+</head>
+<body class="bg-light text-dark font-sans">
+    <!-- Header/Nav -->
+    <nav class="fixed top-0 w-full bg-white shadow-sm z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div class="flex justify-between items-center">
+                <div class="text-2xl font-bold text-primary">Timelines</div>
+                <div class="flex space-x-4">
+                    <button id="newMemoryBtn" class="text-sm font-medium bg-primary text-white px-4 py-2 rounded-lg shadow-sm hover:bg-opacity-90 transition">
+                        + New Memory
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="max-w-3xl mx-auto px-4 pt-24 pb-16">
+        <!-- Empty State -->
+        <div id="emptyState" class="flex flex-col items-center justify-center py-12 text-center">
+            <div class="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mb-6">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+            </div>
+            <h2 class="text-xl font-semibold mb-2">No memories yet</h2>
+            <p class="text-gray-500 mb-6">Start capturing your special moments</p>
+            <button id="createFirstMemoryBtn" class="bg-primary text-white px-6 py-3 rounded-lg shadow-md hover:bg-opacity-90 transition">
+                Create Your First Memory
+            </button>
+        </div>
+
+        <!-- Timeline -->
+        <div id="timeline" class="hidden">
+            <h1 class="text-2xl font-bold mb-6">Your Memories</h1>
+            
+            <div id="memoryList" class="space-y-8">
+                <!-- Memory items will be added here -->
+            </div>
+        </div>
+
+        <!-- Add/Edit Memory Modal -->
+        <div id="memoryModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+            <div class="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-bold" id="modalTitle">Add New Memory</h2>
+                        <button id="closeModalBtn" class="text-gray-400 hover:text-gray-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <form id="memoryForm" class="space-y-4">
+                        <input type="hidden" id="memoryId">
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                            <input type="text" id="memoryTitle" placeholder="Give your memory a title" 
+                                class="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 focus:border-primary focus:bg-white focus:outline-none">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                            <input type="date" id="memoryDate" 
+                                class="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 focus:border-primary focus:bg-white focus:outline-none">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Photo</label>
+                            <div class="relative border-2 border-dashed border-gray-300 rounded-lg px-6 py-8 text-center">
+                                <input type="file" id="memoryPhoto" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                                <div id="photoPlaceholder">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                    <p class="mt-2 text-sm text-gray-500">Click to upload a photo</p>
+                                </div>
+                                <div id="photoPreview" class="hidden">
+                                    <img id="previewImage" class="max-h-48 mx-auto">
+                                    <button type="button" id="removePhotoBtn" class="mt-2 text-sm text-red-500">Remove photo</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Story</label>
+                            <textarea id="memoryStory" rows="4" placeholder="Share the story behind this memory..." 
+                                class="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 focus:border-primary focus:bg-white focus:outline-none"></textarea>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Tags</label>
+                            <input type="text" id="memoryTags" placeholder="Add tags separated by commas (e.g. family, vacation)" 
+                                class="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 focus:border-primary focus:bg-white focus:outline-none">
+                        </div>
+                    </form>
+                    
+                    <div class="flex justify-end space-x-3 mt-6">
+                        <button id="cancelBtn" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition">
+                            Cancel
+                        </button>
+                        <button id="saveMemoryBtn" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-opacity-90 transition">
+                            Save Memory
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Memory Detail Modal -->
+        <div id="detailModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+            <div class="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+                <div id="memoryDetail" class="p-6">
+                    <!-- Memory details will be filled here -->
+                </div>
+                <div class="border-t border-gray-200 p-4 flex justify-between">
+                    <button id="deleteMemoryBtn" class="text-red-500 hover:text-red-600 text-sm font-medium">
+                        Delete Memory
+                    </button>
+                    <div class="flex space-x-3">
+                        <button id="closeDetailBtn" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition">
+                            Close
+                        </button>
+                        <button id="editMemoryBtn" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-opacity-90 transition">
+                            Edit
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html> 
